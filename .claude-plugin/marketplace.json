@@ -3,12 +3,12 @@
   "owner": {
     "name": "Agent Harness contributors"
   },
-  "description": "Claude Code plugin that turns GitHub issues into validated pull requests.",
+  "description": "Ship GitHub issues with Claude Code.",
   "plugins": [
     {
       "name": "agent-harness",
       "source": "./plugins/agent-harness",
-      "description": "Turn GitHub issues into validated pull requests with Claude Code.",
+      "description": "Ship GitHub issues with Claude Code: workpads, feedback sweeps, and validation gates.",
       "category": "Productivity",
       "tags": [
         "claude-code",

@@ -1,9 +1,9 @@
 # Agent Harness
 
-Agent Harness turns GitHub issues into validated pull requests with Claude Code.
+Ship GitHub issues with Claude Code.
 
-It packages the engineering workflow that makes coding agents useful: issue intake, persistent
-workpads, branch setup, focused implementation, validation, PR feedback sweeps, and landing gates.
+Agent Harness turns GitHub issues into validated pull requests with a repeatable delivery loop:
+persistent workpads, focused branches, validation gates, PR feedback sweeps, and safe handoff.
 
 ## Why
 

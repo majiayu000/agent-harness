@@ -1,6 +1,6 @@
 {
   "name": "agent-harness",
-  "description": "Turn GitHub issues into validated pull requests with Claude Code.",
+  "description": "Ship GitHub issues with Claude Code: workpads, feedback sweeps, and validation gates.",
   "version": "0.0.2",
   "author": {
     "name": "Agent Harness contributors"
