@@ -1,4 +1,6 @@
 .DS_Store
 .agent-harness/
+__pycache__/
+*.pyc
 *.log
 tmp/

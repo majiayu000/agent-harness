@@ -10,6 +10,18 @@ Prefer a single persistent GitHub issue comment headed `## Agent Harness Workpad
 write access is unavailable, use `.agent-harness/workpad.md` locally and mention that limitation in
 the handoff.
 
+## Deterministic Helper
+
+Use the bundled helper before hand-written comment management:
+
+```sh
+"${CLAUDE_PLUGIN_ROOT}/scripts/workpad.py" <issue-url-or-number>
+```
+
+By default the helper creates the workpad if missing and reuses the existing comment if present, so
+it does not erase progress. Use `--body-file` or `--replace` only when intentionally replacing the
+full workpad body.
+
 ## Required Sections
 
 ```md

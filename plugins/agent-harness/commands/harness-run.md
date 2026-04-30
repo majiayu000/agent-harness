@@ -7,6 +7,12 @@ argument-hint: "<github-issue-url-or-number>"
 
 Run the Agent Harness delivery flow for `$ARGUMENTS`.
 
+Start by creating or refreshing the persistent GitHub issue workpad:
+
+```sh
+"${CLAUDE_PLUGIN_ROOT}/scripts/workpad.py" "$ARGUMENTS" --status "Harness run started"
+```
+
 Use the `agent-harness:manager` agent as the coordinator. The coordinator must load and follow:
 
 - `github-issue-flow`

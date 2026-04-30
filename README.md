@@ -1,15 +1,15 @@
 # Agent Harness
 
-Agent Harness is a GitHub-first Claude Code plugin for serious issue-to-PR delivery.
+Agent Harness turns GitHub issues into validated pull requests with Claude Code.
 
-It does not try to be a background daemon in v0.1. Instead, it packages the engineering
-workflow that makes coding agents useful: issue intake, workpad discipline, branch setup,
-focused implementation, validation, PR feedback sweep, and landing.
+It packages the engineering workflow that makes coding agents useful: issue intake, persistent
+workpads, branch setup, focused implementation, validation, PR feedback sweeps, and landing gates.
 
 ## Why
 
 Coding agents fail less because of model capability and more because the workflow around them is
-loose. Agent Harness gives Claude Code a repeatable delivery frame:
+loose. Agent Harness gives Claude Code a repeatable delivery frame with deterministic GitHub helper
+scripts where the workflow should not rely on prompt-following alone:
 
 ```text
 GitHub issue
@@ -51,6 +51,7 @@ Then run the namespaced commands:
 
 ```text
 /agent-harness:harness-run https://github.com/majiayu000/agent-harness/issues/123
+/agent-harness:harness-workpad https://github.com/majiayu000/agent-harness/issues/123
 /agent-harness:harness-review 456
 /agent-harness:harness-land 456
 /agent-harness:harness-doctor
@@ -67,6 +68,7 @@ Then run the namespaced commands:
 
 - Commands:
   - `harness-run`: execute a GitHub issue through PR handoff.
+  - `harness-workpad`: create or refresh the persistent GitHub issue workpad.
   - `harness-review`: sweep PR comments, reviews, and checks.
   - `harness-land`: merge only after feedback and checks are clean.
   - `harness-doctor`: verify local prerequisites.
@@ -85,9 +87,19 @@ Then run the namespaced commands:
   - `land-pr`
 - Hooks:
   - Optional task completion gate for harness tasks.
+- Scripts:
+  - `workpad.py`: create/update a single `## Agent Harness Workpad` issue comment.
+  - `pr_feedback_sweep.py`: collect PR reviews, comments, inline comments, and check state.
+  - `doctor.sh`: inspect local repo, GitHub auth, plugin files, and validation hints.
+
+## Local Validation
+
+```sh
+scripts/validate.sh
+```
 
 ## Design Principle
 
-Agent Harness is deliberately GitHub-first and tracker-light. Linear, Jira, and other trackers can
-be added later as adapters, but v0.1 optimizes for the path most open-source users can try in five
-minutes.
+Agent Harness is deliberately GitHub-centered and tracker-light. Linear, Jira, and other trackers
+can be added later as adapters, but the default path should work for most open-source repositories
+in minutes.

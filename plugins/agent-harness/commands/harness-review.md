@@ -7,6 +7,12 @@ argument-hint: "<github-pr-url-or-number>"
 
 Run the Agent Harness PR feedback sweep for `$ARGUMENTS`.
 
+Start with the deterministic GitHub sweep:
+
+```sh
+"${CLAUDE_PLUGIN_ROOT}/scripts/pr_feedback_sweep.py" "$ARGUMENTS"
+```
+
 Use the `agent-harness:reviewer` agent first for a read-only review. Then, if actionable feedback or
 failing checks require code changes, use `agent-harness:executor` for the focused fix.
 

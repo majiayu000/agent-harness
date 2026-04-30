@@ -33,6 +33,8 @@ done
 
 require_executable "$plugin/scripts/doctor.sh"
 require_executable "$plugin/scripts/task_completed_gate.sh"
+require_executable "$plugin/scripts/workpad.py"
+require_executable "$plugin/scripts/pr_feedback_sweep.py"
 
 python3 - "$root" <<'PY'
 import json
@@ -49,6 +51,10 @@ assert marketplace["plugins"][0]["source"] == "./plugins/agent-harness"
 assert plugin["version"]
 assert plugin["repository"].startswith("https://github.com/")
 PY
+
+python3 -m py_compile \
+  "$plugin/scripts/workpad.py" \
+  "$plugin/scripts/pr_feedback_sweep.py"
 
 if command -v claude >/dev/null 2>&1; then
   claude plugin validate "$plugin"

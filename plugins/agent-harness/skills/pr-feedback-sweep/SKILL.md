@@ -8,6 +8,12 @@ Use this before declaring a pull request ready, and again before landing.
 
 ## Required Sources
 
+Start with the bundled helper:
+
+```sh
+"${CLAUDE_PLUGIN_ROOT}/scripts/pr_feedback_sweep.py" <pr-url-or-number>
+```
+
 Gather all available feedback:
 
 - PR summary and status.

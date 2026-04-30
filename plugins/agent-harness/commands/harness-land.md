@@ -7,6 +7,12 @@ argument-hint: "<github-pr-url-or-number>"
 
 Run the Agent Harness landing loop for `$ARGUMENTS`.
 
+Start with:
+
+```sh
+"${CLAUDE_PLUGIN_ROOT}/scripts/pr_feedback_sweep.py" "$ARGUMENTS" --fail-on-blocking --fail-on-pending
+```
+
 Use the `agent-harness:lander` agent and follow the `land-pr` skill.
 
 Required outcome:

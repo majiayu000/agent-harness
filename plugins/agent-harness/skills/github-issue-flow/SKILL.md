@@ -1,5 +1,5 @@
 ---
-description: GitHub-first issue-to-PR delivery workflow. Use when executing a GitHub issue through Agent Harness.
+description: GitHub issue-to-PR delivery workflow. Use when executing a GitHub issue through Agent Harness.
 ---
 
 # GitHub Issue Flow

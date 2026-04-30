@@ -29,5 +29,5 @@ plugin.
 
 ## Release Versioning
 
-The plugin currently pins `"version": "0.1.0"` in `plugins/agent-harness/.claude-plugin/plugin.json`.
+The plugin currently pins `"version": "0.2.0"` in `plugins/agent-harness/.claude-plugin/plugin.json`.
 Bump that version for each published release.
