@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/task_completed_gate.sh",
+            "statusMessage": "Checking Agent Harness completion gate"
+          }
+        ]
+      }
+    ]
+  }
+}

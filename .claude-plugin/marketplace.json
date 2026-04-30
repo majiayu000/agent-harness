@@ -1,0 +1,23 @@
+{
+  "name": "agent-harness",
+  "owner": {
+    "name": "Agent Harness contributors"
+  },
+  "description": "Claude Code plugins for harness-style issue-to-PR delivery.",
+  "plugins": [
+    {
+      "name": "agent-harness",
+      "source": "./plugins/agent-harness",
+      "description": "A GitHub-first engineering harness for Claude Code: issue intake, workpad, validation, PR review sweep, and land loop.",
+      "category": "Productivity",
+      "tags": [
+        "claude-code",
+        "github",
+        "agents",
+        "harness",
+        "pull-requests"
+      ],
+      "license": "MIT"
+    }
+  ]
+}

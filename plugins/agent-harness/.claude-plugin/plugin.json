@@ -1,0 +1,19 @@
+{
+  "name": "agent-harness",
+  "description": "A GitHub-first engineering harness for Claude Code that turns issues into validated pull requests.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Agent Harness contributors"
+  },
+  "homepage": "https://github.com/majiayu000/agent-harness",
+  "repository": "https://github.com/majiayu000/agent-harness",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "github",
+    "agents",
+    "harness",
+    "pull-requests",
+    "workflow"
+  ]
+}
