@@ -47,15 +47,20 @@ After this repository is pushed to GitHub:
 /plugin install agent-harness@agent-harness
 ```
 
-Then run the namespaced commands:
+Then run the main command:
 
 ```text
-/agent-harness:harness-run https://github.com/majiayu000/agent-harness/issues/123
-/agent-harness:harness-workpad https://github.com/majiayu000/agent-harness/issues/123
-/agent-harness:harness-review 456
-/agent-harness:harness-land 456
-/agent-harness:harness-doctor
+/agent-harness:harness https://github.com/majiayu000/agent-harness/issues/123
+/agent-harness:harness workpad https://github.com/majiayu000/agent-harness/issues/123
+/agent-harness:harness review 456
+/agent-harness:harness land 456
+/agent-harness:harness doctor
 ```
+
+Claude Code namespaces plugin commands to avoid conflicts, so a marketplace plugin cannot directly
+ship a bare `/harness` command. This repository includes `.claude/commands/harness.md` as a local
+project alias, so a clone of this repo can use `/harness ...` directly after the plugin is loaded.
+Other repositories can reuse that same alias file after installing the plugin.
 
 ## Requirements
 
@@ -67,6 +72,7 @@ Then run the namespaced commands:
 ## What Is Included
 
 - Commands:
+  - `harness`: one short entrypoint for issue runs, workpads, reviews, landing, and doctor checks.
   - `harness-run`: execute a GitHub issue through PR handoff.
   - `harness-workpad`: create or refresh the persistent GitHub issue workpad.
   - `harness-review`: sweep PR comments, reviews, and checks.

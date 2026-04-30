@@ -12,7 +12,7 @@ Inside Claude Code:
 
 ```text
 /reload-plugins
-/agent-harness:harness-doctor
+/agent-harness:harness doctor
 ```
 
 ## GitHub Marketplace
@@ -26,6 +26,27 @@ Push this repository to GitHub, then users can add it as a marketplace:
 
 The root `.claude-plugin/marketplace.json` exposes `plugins/agent-harness` as the installable
 plugin.
+
+## Command Names
+
+The primary command is:
+
+```text
+/agent-harness:harness <github-issue-url-or-number>
+```
+
+It also accepts:
+
+```text
+/agent-harness:harness workpad <github-issue-url-or-number>
+/agent-harness:harness review <github-pr-url-or-number>
+/agent-harness:harness land <github-pr-url-or-number>
+/agent-harness:harness doctor
+```
+
+Claude Code automatically namespaces plugin commands. A published plugin cannot provide bare
+`/harness`; this repository includes `.claude/commands/harness.md` as a local project alias for
+that short form.
 
 ## Release Versioning
 
