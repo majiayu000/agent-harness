@@ -88,12 +88,23 @@ for required in \
   fi
 done
 
-if [ -f ".agent-harness/required-checks.txt" ]; then
-  check_count="$(grep -Ev '^[[:space:]]*(#|$)' .agent-harness/required-checks.txt | wc -l | tr -d ' ')"
+checks_file=""
+if git rev-parse --show-toplevel >/dev/null 2>&1; then
+  checks_file="$(git rev-parse --show-toplevel)/.agent-harness/required-checks.txt"
+elif [ -f ".agent-harness/required-checks.txt" ]; then
+  checks_file=".agent-harness/required-checks.txt"
+fi
+
+if [ -n "$checks_file" ] && [ -f "$checks_file" ]; then
+  check_count="$(grep -Ev '^[[:space:]]*(#|$)' "$checks_file" | wc -l | tr -d ' ')"
   printf '%s\n' "- required checks: $check_count configured"
 else
   printf '%s\n' "- required checks: none configured"
 fi
+
+printf '%s\n' "- required-checks trust: repo-controlled .agent-harness/required-checks.txt is untrusted input"
+printf '%s\n' "- enforcement: TaskCompleted gate runs checks only when AGENT_HARNESS_ENFORCE=1 (subject tags alone never enforce)"
+printf '%s\n' "- execution: checks run as argv arrays against an allowlist / repo-relative executables; never via sh -lc"
 
 section "Validation Hints"
 
