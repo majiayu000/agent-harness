@@ -77,8 +77,40 @@ def issue_comments(repo: str, number: int) -> list[dict[str, Any]]:
     return flatten_pages(payload)
 
 
-def find_workpad(comments: list[dict[str, Any]]) -> dict[str, Any] | None:
-    candidates = [comment for comment in comments if MARKER in str(comment.get("body", ""))]
+def gh_viewer_login() -> str:
+    """Return the authenticated GitHub login used by `gh`."""
+    result = run(["gh", "api", "user", "-q", ".login"])
+    login = result.stdout.strip()
+    if not login:
+        raise SystemExit("unable to resolve authenticated gh viewer login")
+    return login
+
+
+def comment_author_login(comment: dict[str, Any]) -> str | None:
+    user = comment.get("user")
+    if not isinstance(user, dict):
+        return None
+    login = user.get("login")
+    return str(login) if login else None
+
+
+def find_workpad(
+    comments: list[dict[str, Any]],
+    *,
+    author_login: str,
+) -> dict[str, Any] | None:
+    """Return the newest workpad comment authored by `author_login`, if any.
+
+    Foreign marker comments are ignored so upsert creates an operator-owned workpad
+    instead of reusing attacker-controlled text.
+    """
+    author = author_login.casefold()
+    candidates = [
+        comment
+        for comment in comments
+        if MARKER in str(comment.get("body", ""))
+        and (comment_author_login(comment) or "").casefold() == author
+    ]
     candidates.sort(key=lambda comment: str(comment.get("created_at", "")), reverse=True)
     return candidates[0] if candidates else None
 
@@ -162,13 +194,20 @@ def build_default_body(repo: str, number: int, status: str | None) -> str:
 
 
 def upsert_comment(repo: str, number: int, body: str, *, replace: bool) -> tuple[str, dict[str, Any]]:
+    viewer = gh_viewer_login()
     comments = issue_comments(repo, number)
-    existing = find_workpad(comments)
+    existing = find_workpad(comments, author_login=viewer)
 
     if existing and not replace:
         return "reused", existing
 
     if existing and replace:
+        # Defense in depth: never PATCH a workpad that is not owned by the viewer.
+        if (comment_author_login(existing) or "").casefold() != viewer.casefold():
+            raise SystemExit(
+                f"refusing to replace workpad comment {existing.get('id')} "
+                f"authored by {comment_author_login(existing)!r}; expected viewer {viewer!r}"
+            )
         return "updated", gh_json(
             [
                 "api",
