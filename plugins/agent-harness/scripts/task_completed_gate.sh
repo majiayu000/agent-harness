@@ -40,9 +40,11 @@ is_allowlisted_command() {
 }
 
 # Reject shell metacharacters so checks never go through a shell -c/-lc path.
+# Also reject pathname globs (* ? []) so unquoted word-splitting cannot expand
+# differently based on files in the execution directory.
 has_shell_metacharacters() {
   case "$1" in
-    *[\;\|\&\$\`\(\)\<\>\'\"\\]*)
+    *[\;\|\&\$\`\(\)\<\>\'\"\\*\?\[]* | *\]*)
       return 0
       ;;
     *)
@@ -101,9 +103,20 @@ resolve_check_executable() {
   return 0
 }
 
+# Execute checks from the resolved repository root so subdirectory Makefiles or
+# CWD-relative tools cannot bypass the root project's required checks.
+CDPATH= cd -- "$root" || {
+  printf 'agent-harness: cannot cd to git toplevel: %s\n' "$root" >&2
+  exit 2
+}
+
 failed=0
 
 while IFS= read -r check || [ -n "$check" ]; do
+  # Trim leading whitespace so indented comments match doctor.sh's
+  # '^[[:space:]]*(#|$)' exclusion and are not treated as argv.
+  check="${check#"${check%%[![:space:]]*}"}"
+
   case "$check" in
     ""|\#*)
       continue
@@ -116,7 +129,7 @@ while IFS= read -r check || [ -n "$check" ]; do
     continue
   fi
 
-  # Intentional word-splitting into argv; shell metacharacters already rejected.
+  # Intentional word-splitting into argv; shell metacharacters and globs already rejected.
   # shellcheck disable=SC2086
   set -- $check
   if [ "$#" -eq 0 ]; then
