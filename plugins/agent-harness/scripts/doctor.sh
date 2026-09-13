@@ -19,6 +19,8 @@ check_command() {
 
 # Prefer AGENT_HARNESS_REPO_ROOT over the detected git root so every
 # repository-specific diagnostic matches task_completed_gate.sh precedence.
+# When outside a git worktree, fall back to CLAUDE_PLUGIN_ROOT/../.. the same
+# way the gate does for plugins living inside a checkout.
 resolve_effective_root() {
   if [ -n "${AGENT_HARNESS_REPO_ROOT:-}" ]; then
     if abs_root="$(CDPATH= cd -- "$AGENT_HARNESS_REPO_ROOT" && pwd)"; then
@@ -31,6 +33,16 @@ resolve_effective_root() {
   if git rev-parse --show-toplevel >/dev/null 2>&1; then
     git rev-parse --show-toplevel
     return 0
+  fi
+
+  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+    # Plugin root is plugins/agent-harness; repository root is two levels up when
+    # the plugin lives inside the checkout. Prefer git when available (above).
+    candidate="$(CDPATH= cd -- "$CLAUDE_PLUGIN_ROOT/../.." && pwd)"
+    if [ -d "$candidate/.git" ] || [ -f "$candidate/.git" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
   fi
 
   return 1
@@ -56,8 +68,10 @@ if [ "$root_resolved" -eq 1 ]; then
   printf '%s\n' "- root: $root"
   if [ -n "${AGENT_HARNESS_REPO_ROOT:-}" ]; then
     printf '%s\n' "- root source: AGENT_HARNESS_REPO_ROOT"
-  else
+  elif git rev-parse --show-toplevel >/dev/null 2>&1; then
     printf '%s\n' "- root source: git toplevel"
+  else
+    printf '%s\n' "- root source: CLAUDE_PLUGIN_ROOT fallback"
   fi
   printf '%s\n' "- branch: ${branch:-detached}"
   printf '%s\n' "- head: ${head:-unknown}"
@@ -150,10 +164,11 @@ printf '%s\n' "- execution: checks run as argv arrays against an allowlist / rep
 
 section "Validation Hints"
 
+# Only advertise validators under the effective root. After a root has been
+# resolved (including via AGENT_HARNESS_REPO_ROOT), never fall back to the
+# process CWD — that can advertise another checkout's scripts for this root.
 if [ "$root_resolved" -eq 1 ] && [ -x "$root/scripts/validate.sh" ]; then
   printf '%s\n' "- possible: $root/scripts/validate.sh"
-elif [ -x "scripts/validate.sh" ]; then
-  printf '%s\n' "- possible: scripts/validate.sh"
 fi
 
 for candidate in "make test" "make all" "npm test" "pnpm test" "bun test" "cargo test" "go test ./..." "pytest"; do
