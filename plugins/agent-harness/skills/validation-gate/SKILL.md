@@ -33,5 +33,18 @@ Record:
 
 ## Optional Repository Gate File
 
-Projects can add `.agent-harness/required-checks.txt` with one shell command per line. Harness hooks
-and agents should treat those commands as required before completing `[harness]` tasks.
+Projects can add `.agent-harness/required-checks.txt` with one command per line
+(argv form: program plus arguments, no shell syntax).
+
+### Trust boundary (SEC-07)
+
+- That file is **repository-controlled and untrusted**. A compromised repo can plant
+  hostile lines; the TaskCompleted hook must not treat it as operator intent.
+- The hook enforces required checks **only** when `AGENT_HARNESS_ENFORCE=1` is set
+  explicitly by the operator. Subject tags such as `[harness]` alone never trigger
+  enforcement.
+- Checks are resolved from the **git toplevel** (not process CWD).
+- Lines are executed as **argv arrays** against an allowlisted set of tools or
+  repo-relative executables. Freeform shell via `sh -lc` is not used.
+- Prefer intentional local validation (`scripts/validate.sh`, package test commands)
+  over relying on the lifecycle hook for security-sensitive gates.
