@@ -15,15 +15,47 @@ case "${AGENT_HARNESS_ENFORCE:-0}" in
     ;;
 esac
 
-if ! root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
-  printf 'agent-harness: cannot resolve git toplevel; skipping required checks\n' >&2
-  exit 0
+# Prefer an explicit override, then git toplevel, then a plugin-in-checkout
+# fallback. Enforcement is already active here, so resolution failure is fatal.
+resolve_repo_root() {
+  if [ -n "${AGENT_HARNESS_REPO_ROOT:-}" ]; then
+    # Canonicalize to an absolute path before constructing checks_file so a
+    # relative override (e.g. target) does not double after cd "$root".
+    if ! abs_root="$(CDPATH= cd -- "$AGENT_HARNESS_REPO_ROOT" && pwd)"; then
+      return 1
+    fi
+    printf '%s\n' "$abs_root"
+    return 0
+  fi
+
+  if root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+    printf '%s\n' "$root"
+    return 0
+  fi
+
+  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+    # Plugin root is plugins/agent-harness; repository root is two levels up when
+    # the plugin lives inside the checkout. Prefer git when available (above).
+    candidate="$(CDPATH= cd -- "$CLAUDE_PLUGIN_ROOT/../.." && pwd)"
+    if [ -d "$candidate/.git" ] || [ -f "$candidate/.git" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+if ! root="$(resolve_repo_root)"; then
+  printf 'agent-harness: enforcement active but could not resolve repository root (set AGENT_HARNESS_REPO_ROOT or run inside a git checkout)\n' >&2
+  exit 2
 fi
 
 checks_file="$root/.agent-harness/required-checks.txt"
 
 if [ ! -f "$checks_file" ]; then
-  exit 0
+  printf 'agent-harness: enforcement active but required checks file missing: %s\n' "$checks_file" >&2
+  exit 2
 fi
 
 # Allowlisted bare commands that may appear as argv[0]. Repo-relative executable
@@ -106,7 +138,7 @@ resolve_check_executable() {
 # Execute checks from the resolved repository root so subdirectory Makefiles or
 # CWD-relative tools cannot bypass the root project's required checks.
 CDPATH= cd -- "$root" || {
-  printf 'agent-harness: cannot cd to git toplevel: %s\n' "$root" >&2
+  printf 'agent-harness: cannot cd to repository root: %s\n' "$root" >&2
   exit 2
 }
 
