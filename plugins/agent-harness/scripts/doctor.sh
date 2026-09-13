@@ -17,24 +17,67 @@ check_command() {
   fi
 }
 
+# Prefer AGENT_HARNESS_REPO_ROOT over the detected git root so every
+# repository-specific diagnostic matches task_completed_gate.sh precedence.
+# When outside a git worktree, fall back to CLAUDE_PLUGIN_ROOT/../.. the same
+# way the gate does for plugins living inside a checkout.
+resolve_effective_root() {
+  if [ -n "${AGENT_HARNESS_REPO_ROOT:-}" ]; then
+    if abs_root="$(CDPATH= cd -- "$AGENT_HARNESS_REPO_ROOT" && pwd)"; then
+      printf '%s\n' "$abs_root"
+      return 0
+    fi
+    return 1
+  fi
+
+  if git rev-parse --show-toplevel >/dev/null 2>&1; then
+    git rev-parse --show-toplevel
+    return 0
+  fi
+
+  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+    # Plugin root is plugins/agent-harness; repository root is two levels up when
+    # the plugin lives inside the checkout. Prefer git when available (above).
+    candidate="$(CDPATH= cd -- "$CLAUDE_PLUGIN_ROOT/../.." && pwd)"
+    if [ -d "$candidate/.git" ] || [ -f "$candidate/.git" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
 section "Agent Harness Doctor"
 
 check_command git
 check_command gh
 
+root=""
+root_resolved=0
+if root="$(resolve_effective_root)"; then
+  root_resolved=1
+fi
+
 section "Repository"
 
-if git rev-parse --show-toplevel >/dev/null 2>&1; then
-  root="$(git rev-parse --show-toplevel)"
-  branch="$(git branch --show-current 2>/dev/null || true)"
-  head="$(git rev-parse --short HEAD 2>/dev/null || true)"
-  upstream="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || true)"
+if [ "$root_resolved" -eq 1 ]; then
+  branch="$(git -C "$root" branch --show-current 2>/dev/null || true)"
+  head="$(git -C "$root" rev-parse --short HEAD 2>/dev/null || true)"
+  upstream="$(git -C "$root" rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || true)"
   printf '%s\n' "- root: $root"
+  if [ -n "${AGENT_HARNESS_REPO_ROOT:-}" ]; then
+    printf '%s\n' "- root source: AGENT_HARNESS_REPO_ROOT"
+  elif git rev-parse --show-toplevel >/dev/null 2>&1; then
+    printf '%s\n' "- root source: git toplevel"
+  else
+    printf '%s\n' "- root source: CLAUDE_PLUGIN_ROOT fallback"
+  fi
   printf '%s\n' "- branch: ${branch:-detached}"
   printf '%s\n' "- head: ${head:-unknown}"
   printf '%s\n' "- upstream: ${upstream:-none}"
   printf '%s\n' "- status:"
-  git status --short || true
+  git -C "$root" status --short || true
 else
   printf '%s\n' "- git repository: missing"
   status="Blocked"
@@ -50,7 +93,12 @@ if command -v gh >/dev/null 2>&1; then
     status="Needs setup"
   fi
 
-  repo_info="$(gh repo view --json nameWithOwner,url,defaultBranchRef,viewerPermission,hasIssuesEnabled,visibility 2>/dev/null || true)"
+  repo_info=""
+  if [ "$root_resolved" -eq 1 ]; then
+    repo_info="$(CDPATH= cd -- "$root" && gh repo view --json nameWithOwner,url,defaultBranchRef,viewerPermission,hasIssuesEnabled,visibility 2>/dev/null || true)"
+  else
+    repo_info="$(gh repo view --json nameWithOwner,url,defaultBranchRef,viewerPermission,hasIssuesEnabled,visibility 2>/dev/null || true)"
+  fi
   if [ -n "$repo_info" ] && command -v python3 >/dev/null 2>&1; then
     REPO_INFO="$repo_info" python3 - <<'PY'
 import json
@@ -89,17 +137,25 @@ for required in \
 done
 
 checks_file=""
-if git rev-parse --show-toplevel >/dev/null 2>&1; then
-  checks_file="$(git rev-parse --show-toplevel)/.agent-harness/required-checks.txt"
-elif [ -f ".agent-harness/required-checks.txt" ]; then
-  checks_file=".agent-harness/required-checks.txt"
+if [ "$root_resolved" -eq 1 ]; then
+  checks_file="$root/.agent-harness/required-checks.txt"
 fi
 
 if [ -n "$checks_file" ] && [ -f "$checks_file" ]; then
   check_count="$(grep -Ev '^[[:space:]]*(#|$)' "$checks_file" | wc -l | tr -d ' ')"
-  printf '%s\n' "- required checks: $check_count configured"
+  printf '%s\n' "- required checks: $check_count configured ($checks_file)"
+elif [ -n "$checks_file" ]; then
+  printf '%s\n' "- required checks: none configured at $checks_file"
+  # Align with task_completed_gate.sh: enforcement fails closed when the
+  # required-checks file is missing, so doctor must not report Ready.
+  if [ "${AGENT_HARNESS_ENFORCE:-0}" = "1" ]; then
+    status="Blocked"
+  fi
 else
-  printf '%s\n' "- required checks: none configured"
+  printf '%s\n' "- required checks: unavailable (repository root not resolved)"
+  if [ "${AGENT_HARNESS_ENFORCE:-0}" = "1" ]; then
+    status="Blocked"
+  fi
 fi
 
 printf '%s\n' "- required-checks trust: repo-controlled .agent-harness/required-checks.txt is untrusted input"
@@ -108,8 +164,11 @@ printf '%s\n' "- execution: checks run as argv arrays against an allowlist / rep
 
 section "Validation Hints"
 
-if [ -x "scripts/validate.sh" ]; then
-  printf '%s\n' "- possible: scripts/validate.sh"
+# Only advertise validators under the effective root. After a root has been
+# resolved (including via AGENT_HARNESS_REPO_ROOT), never fall back to the
+# process CWD — that can advertise another checkout's scripts for this root.
+if [ "$root_resolved" -eq 1 ] && [ -x "$root/scripts/validate.sh" ]; then
+  printf '%s\n' "- possible: $root/scripts/validate.sh"
 fi
 
 for candidate in "make test" "make all" "npm test" "pnpm test" "bun test" "cargo test" "go test ./..." "pytest"; do
