@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -13,7 +14,10 @@ from typing import Any
 
 def run(args: list[str], *, allowed: set[int] | None = None) -> subprocess.CompletedProcess[str]:
     allowed = allowed or {0}
-    result = subprocess.run(args, text=True, capture_output=True)
+    # gh colorizes `--json` on a pipe when CLICOLOR_FORCE is set. Child only.
+    env = os.environ.copy()
+    env["CLICOLOR_FORCE"] = "0"
+    result = subprocess.run(args, text=True, capture_output=True, env=env)
     if result.returncode not in allowed:
         message = result.stderr.strip() or result.stdout.strip() or "command failed"
         raise SystemExit(f"{' '.join(args)}\n{message}")

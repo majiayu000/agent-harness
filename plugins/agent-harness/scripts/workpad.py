@@ -17,7 +17,10 @@ MARKER = "## Agent Harness Workpad"
 
 
 def run(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(args, text=True, capture_output=True)
+    # gh colorizes `--json` on a pipe when CLICOLOR_FORCE is set. Child only.
+    env = os.environ.copy()
+    env["CLICOLOR_FORCE"] = "0"
+    result = subprocess.run(args, text=True, capture_output=True, env=env)
     if check and result.returncode != 0:
         message = result.stderr.strip() or result.stdout.strip() or "command failed"
         raise SystemExit(f"{' '.join(args)}\n{message}")
