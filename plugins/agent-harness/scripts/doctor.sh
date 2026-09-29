@@ -17,6 +17,12 @@ check_command() {
   fi
 }
 
+# gh colorizes `--json` on a pipe when CLICOLOR_FORCE is set. Prefix only the
+# gh command; do not export the override for the rest of this process.
+gh_plain() {
+  CLICOLOR_FORCE=0 gh "$@"
+}
+
 # Prefer AGENT_HARNESS_REPO_ROOT over the detected git root so every
 # repository-specific diagnostic matches task_completed_gate.sh precedence.
 # When outside a git worktree, fall back to CLAUDE_PLUGIN_ROOT/../.. the same
@@ -86,7 +92,7 @@ fi
 section "GitHub"
 
 if command -v gh >/dev/null 2>&1; then
-  if gh auth status >/dev/null 2>&1; then
+  if gh_plain auth status >/dev/null 2>&1; then
     printf '%s\n' "- gh auth: ok"
   else
     printf '%s\n' "- gh auth: unavailable"
@@ -95,17 +101,23 @@ if command -v gh >/dev/null 2>&1; then
 
   repo_info=""
   if [ "$root_resolved" -eq 1 ]; then
-    repo_info="$(CDPATH= cd -- "$root" && gh repo view --json nameWithOwner,url,defaultBranchRef,viewerPermission,hasIssuesEnabled,visibility 2>/dev/null || true)"
+    repo_info="$(CDPATH= cd -- "$root" && gh_plain repo view --json nameWithOwner,url,defaultBranchRef,viewerPermission,hasIssuesEnabled,visibility 2>/dev/null || true)"
   else
-    repo_info="$(gh repo view --json nameWithOwner,url,defaultBranchRef,viewerPermission,hasIssuesEnabled,visibility 2>/dev/null || true)"
+    repo_info="$(gh_plain repo view --json nameWithOwner,url,defaultBranchRef,viewerPermission,hasIssuesEnabled,visibility 2>/dev/null || true)"
   fi
+  repo_parsed=0
   if [ -n "$repo_info" ] && command -v python3 >/dev/null 2>&1; then
-    REPO_INFO="$repo_info" python3 - <<'PY'
+    if REPO_INFO="$repo_info" python3 - <<'PY'
 import json
 import os
 import sys
 
-payload = json.loads(os.environ["REPO_INFO"])
+try:
+    payload = json.loads(os.environ["REPO_INFO"])
+except json.JSONDecodeError:
+    # Exit 2 so the shell can report repo unavailable without aborting.
+    sys.exit(2)
+
 default_branch = (payload.get("defaultBranchRef") or {}).get("name") or "unknown"
 print(f"- repo: {payload.get('nameWithOwner') or 'unknown'}")
 print(f"- url: {payload.get('url') or 'unknown'}")
@@ -114,7 +126,11 @@ print(f"- default branch: {default_branch}")
 print(f"- viewer permission: {payload.get('viewerPermission') or 'unknown'}")
 print(f"- issues enabled: {payload.get('hasIssuesEnabled')}")
 PY
-  else
+    then
+      repo_parsed=1
+    fi
+  fi
+  if [ "$repo_parsed" -eq 0 ]; then
     printf '%s\n' "- repo: unavailable"
     status="Needs setup"
   fi
