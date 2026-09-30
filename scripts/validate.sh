@@ -56,6 +56,8 @@ python3 -m py_compile \
   "$plugin/scripts/workpad.py" \
   "$plugin/scripts/pr_feedback_sweep.py"
 
+python3 "$plugin/scripts/test_pr_feedback_sweep.py"
+
 if command -v claude >/dev/null 2>&1; then
   claude plugin validate "$plugin"
   claude plugin validate "$root"

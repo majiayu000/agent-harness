@@ -90,19 +90,25 @@ def inline_comments(repo: str, number: int) -> list[dict[str, Any]]:
 
 
 def check_runs(repo: str, target: str) -> list[dict[str, Any]]:
-    payload = gh_json(
-        [
-            "pr",
-            "checks",
-            target,
-            "--repo",
-            repo,
-            "--json",
-            "name,state,bucket,link,workflow,description,startedAt,completedAt",
-        ],
-        allowed={0, 1, 8},
-    )
-    return payload if isinstance(payload, list) else []
+    args = [
+        "gh",
+        "pr",
+        "checks",
+        target,
+        "--repo",
+        repo,
+        "--json",
+        "name,state,bucket,link,workflow,description,startedAt,completedAt",
+    ]
+    result = run(args, allowed={0, 1, 8})
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        payload = None
+    if not isinstance(payload, list):
+        message = result.stderr.strip() or "check status unavailable: expected a JSON list"
+        raise SystemExit(f"{' '.join(args)}\n{message}")
+    return payload
 
 
 def classify(summary: dict[str, Any]) -> dict[str, list[str]]:
