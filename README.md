@@ -26,9 +26,11 @@ GitHub issue
 
 ## Install For Local Development
 
-From this repository:
+Clone the repository, then load the plugin:
 
 ```sh
+git clone https://github.com/majiayu000/agent-harness.git
+cd agent-harness
 claude --plugin-dir ./plugins/agent-harness
 ```
 
@@ -40,7 +42,7 @@ Inside Claude Code, reload after edits:
 
 ## Install From A GitHub Marketplace
 
-After this repository is pushed to GitHub:
+Inside Claude Code:
 
 ```text
 /plugin marketplace add majiayu000/agent-harness
